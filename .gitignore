@@ -1,0 +1,64 @@
+syntax: glob
+
+# Byte-compiled / optimized / DLL files
+__pycache__/
+*.py[cod]
+*$py.class
+
+# C extensions
+*.so
+
+# Installer logs
+pip-log.txt
+pip-delete-this-directory.txt
+
+# Unit test / coverage reports
+htmlcov/
+.tox/
+.coverage
+.coverage.*
+.cache
+nosetests.xml
+coverage.xml
+results.xml
+*.cover
+.hypothesis/
+.pytest_cache/
+
+# Profiling
+*.lprof
+
+# Translations
+*.mo
+*.pot
+
+# Django
+*.log
+
+# Sphinx documentation
+docs/build/
+docs/generated/
+
+# PyBuilder
+target/
+
+# pyenv python configuration file
+.python-version
+
+# LaTex
+*.aux
+*.log
+*.pdf
+
+# Vim
+Session.vim
+*.swp
+*.orig
+
+# OS X
+.DS_Store
+
+# Misc
+scratch*
+experiments
+
