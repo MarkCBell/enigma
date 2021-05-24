@@ -1,0 +1,6 @@
+
+AWS Batch is optimized for batch computing and applications that scale through the execution of multiple jobs in parallel.
+Deep learning, genomics analysis, financial risk models, Monte Carlo simulations, animation rendering, media transcoding, image processing, and engineering simulations are all excellent examples of batch computing applications.
+
+
+https://cryptii.com/pipes/enigma-machine
