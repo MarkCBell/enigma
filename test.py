@@ -19,7 +19,7 @@ if __name__ == '__main__':
     # BEF
     # ma rk sd jc ob
     
-    rotors, reflector, plugboard, rings, offsets = brute(c, range(4), 3, range(1), 5)[0]
+    rotors, reflector, plugboard, rings, offsets = brute(c, range(5), 3, range(1), 5)[0]
     
     pp = Enigma(rotors, reflector, plugboard, rings, offsets)(c)
     
