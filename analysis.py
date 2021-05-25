@@ -6,6 +6,7 @@ from heapq import nlargest
 from progress.bar import Bar
 
 from extensions.enigma import Enigma
+# from enigma import Enigma
 
 def find_best(c, settings, label, count, top=1):
     with Bar(label, max=count, width=80, suffix='%(index)d/%(max)d %(eta)ds') as bar:

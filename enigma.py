@@ -1,125 +1,107 @@
+# distutils: language = c++
 
-encode = lambda c: ord(c) - 65
-decode = lambda x: chr(x + 65)
+STR_ROTORS = [
+    "EKMFLGDQVZNTOWYHXUSPAIBRCJ",
+    "AJDKSIRUXBLHWTMCQGZNPYFVOE",
+    "BDFHJLCPRTXVZNYEIWGAKMUSQO",
+    "ESOVPZJAYQUIRHXLNFTGKDCMWB",
+    "VZBRGITYUPSDNHLXAWMJQOFECK",
+    ]
+ROTOR_NOTCHES = [ord(c) - 65 for c in "QEVJZ"]
+STR_REFLECTORS = [
+    "YRUHQSLDPXNGOKMIEBFZCWVJAT",
+    "FVPJIAOYEDRZXWGCTKUQSBNMHL",
+    ]
 
-class Permutation:
-    def __init__(self, forwards, backwards, name=None):
-        self.forwards = forwards
-        self.backwards = backwards
-        self.name = name
+ROTORS = [[ord(c) - 65 for c in rotor] for rotor in STR_ROTORS]
+INV_ROTORS = [[0] * 26 for _ in range(len(STR_ROTORS))]
+for i, r in enumerate(ROTORS):
+    for x, y in enumerate(r):
+        INV_ROTORS[i][y] = x
 
-    def __str__(self):
-        return str(self.name)
-
-    def __repr__(self):
-        return str(self)
-
-    def __call__(self, c):
-        return self.forwards[c]
-
-    def __getitem__(self, c):
-        return self.backwards[c]
-
-    def __invert__(self):
-        return Permutation(self.backwards, self.forwards, self.name)
-
-    def is_order2(self):
-        return all(self(self(c)) == c for c in range(26))
-
-    @classmethod
-    def from_string(cls, strn, name=None):
-        if name is None: name = strn
-        forwards = [encode(c) for c in strn]
-        backwards = [None] * 26
-        for i, j in enumerate(forwards):
-            backwards[j] = i
-
-        return cls(forwards, backwards, name)
-
-    @classmethod
-    def from_shift(cls, k, name=None):
-        if name is None: name = str(k)
-        forwards = [(i + k) % 26 for i in range(26)]
-        backwards = [(i - k) % 26 for i in range(26)]
-        return cls(forwards, backwards, name)
-
-    @classmethod
-    def from_pairs(cls, strn, name=None):
-        if name is None: name = strn
-        mapping = list(range(26))
-        for k, v in zip(strn[::3], strn[1::3]):
-            mapping[encode(k)] = encode(v)
-            mapping[encode(v)] = encode(k)
-        return cls(mapping, mapping, name)
-
-
-# Real rotors.
-def rotors():
-    return (
-        Permutation.from_string("EKMFLGDQVZNTOWYHXUSPAIBRCJ", "I"),  # {16},
-        Permutation.from_string("AJDKSIRUXBLHWTMCQGZNPYFVOE", "II"),  # {4}
-        Permutation.from_string("BDFHJLCPRTXVZNYEIWGAKMUSQO", "III"),  # {21}
-        Permutation.from_string("ESOVPZJAYQUIRHXLNFTGKDCMWB", "IV"),  # {9}
-        Permutation.from_string("VZBRGITYUPSDNHLXAWMJQOFECK", "V"),  # {25}
-        Permutation.from_string("JPGVOUMFYQBENHZRDKASXLICTW", "VI"),  # {12, 25}  # {0, 13}
-        Permutation.from_string("NZJHGRCXMYSWBOUFAIVLPEKQDT", "VII"),  # {12, 25}  # {0, 13}
-        Permutation.from_string("FKQHTLXOCBJSPDZRAMEWNIUYGV", "VIII"),  # {12, 25}  # {0, 13}
-        )
-
-# Real reflectors.
-def reflectors():
-    return (
-        Permutation.from_string("YRUHQSLDPXNGOKMIEBFZCWVJAT", "B"),
-        Permutation.from_string("FVPJIAOYEDRZXWGCTKUQSBNMHL", "C"),
-        )
-
+REFLECTORS = [[ord(c) - 65 for c in reflector] for reflector in STR_REFLECTORS]
 
 class Enigma:
-    def __init__(self, reflector, rotors, offsets, rings, plugboard):
-        self.reflector = reflector
+    def __init__(self, reflector, rotors, position, rings, plugboard):
+        self.num_rotors = len(rotors)
         self.rotors = rotors
-        self.offsets = offsets
-        self.rings = rings
-        self.plugboard = Permutation.from_pairs(plugboard)
-        assert self.reflector.is_order2()
-        self.shifts = [Permutation.from_shift(i) for i in range(26)]
+        self.reflector = reflector
+        self.notches = [ROTOR_NOTCHES[rotor] for rotor in self.rotors]
 
-    def __call__(self, word):
-        sequence = [encode(letter) for letter in word]
+        mapping = list(range(26))
+        for k, v in zip(plugboard[::3], plugboard[1::3]):
+            mapping[ord(k) - 65] = ord(v) - 65
+            mapping[ord(v) - 65] = ord(k) - 65
+        self.plugboard = mapping
+
+        self.offsets = position
+        self.rings = rings
+
+    def score(self, word):
+        freq = [0] * 26
         offsets = list(self.offsets)  # Work with a local copy.
         output = []
-        for p in sequence:
+        for letter in word:
             # Rotate the offsets.
-            # THIS IS NOT CORRECT
-            for i in range(len(offsets)):
-                offsets[i] = (offsets[i] + 1) % 26
-                if offsets[i] != self.rings[i]: break
+            for i in range(self.num_rotors):
+                if offsets[i] == self.notches[i]:
+                    if i < self.num_rotors - 1:
+                        offsets[i] = (offsets[i] + 1) % 26
+                    if i > 0:
+                        offsets[i-1] = (offsets[i-1] + 1) % 26
+            offsets[self.num_rotors-1] = (offsets[self.num_rotors-1] + 1) % 26
 
-            # enigma map = reflector**(rotor1**offset1 * rotor2**offset2 * ... * rotorN**offsetN * plugboard)
-            c = p
+            c = ord(letter) - 65
 
-            c = self.plugboard(c)
-            for rotor, k in zip(self.rotors, offsets):
-                shift = self.shifts[k]
-                c = shift[rotor(shift(c))]
+            c = self.plugboard[c]
 
-            c = self.reflector(c)
+            for rotor, offset, ring in zip(reversed(self.rotors), reversed(offsets), reversed(self.rings)):
+                shift = offset - ring
+                c = (ROTORS[rotor][(c + shift) % 26] - shift) % 26
 
-            for rotor, k in zip(reversed(self.rotors), reversed(offsets)):
-                shift = self.shifts[k]
-                c = shift[rotor[shift(c)]]
+            c = REFLECTORS[self.reflector][c]
+
+            for rotor, offset, ring in zip(self.rotors, offsets, self.rings):
+                shift = offset - ring
+                c = (INV_ROTORS[rotor][(c + shift) % 26] - shift) % 26
+
+            c = self.plugboard[c]
+
+            output.append(c)
+            freq[c] += 1
+
+        return sum(x*x for x in freq)
+
+    def __call__(self, word):
+        offsets = list(self.offsets)  # Work with a local copy.
+        output = []
+        for letter in word:
+            # Rotate the offsets.
+            for i in range(self.num_rotors):
+                if offsets[i] == ROTOR_NOTCHES[self.rotors[i]]:
+                    if i < self.num_rotors - 1:
+                        offsets[i] = (offsets[i] + 1) % 26
+                    if i > 0:
+                        offsets[i-1] = (offsets[i-1] + 1) % 26
+            offsets[self.num_rotors-1] = (offsets[self.num_rotors-1] + 1) % 26
+
+            c = ord(letter) - 65
+
+            c = self.plugboard[c]
+
+            for rotor, offset, ring in zip(reversed(self.rotors), reversed(offsets), reversed(self.rings)):
+                shift = offset - ring
+                c = (ROTORS[rotor][(c + shift) % 26] - shift) % 26
+
+            c = REFLECTORS[self.reflector][c]
+
+            for rotor, offset, ring in zip(self.rotors, offsets, self.rings):
+                shift = offset - ring
+                c = (INV_ROTORS[rotor][(c + shift) % 26] - shift) % 26
+
             c = self.plugboard[c]
 
             output.append(c)
 
-        return ''.join(decode(x) for x in output)
-
-
-if __name__ == '__main__':
-    I, II, III, IV, V, VI, VII, VIII = rotors()
-    B, C = reflectors()
-    E = Enigma([I, II, III], B, '', [0, 0, 0], [0, 0, 0])
-    p = 'AAAAAAA'
-    print(E(p))
-    assert p == E(E(p))
+        return ''.join(chr(x + 65) for x in output)
 
