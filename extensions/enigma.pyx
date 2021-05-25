@@ -12,25 +12,23 @@ STR_ROTORS = [
     "ESOVPZJAYQUIRHXLNFTGKDCMWB",
     "VZBRGITYUPSDNHLXAWMJQOFECK",
     ]
-
-cdef array.array FREQ = array.array('i', [0] * 26)
-
-cdef array.array ROTORS = array.array('i', [ord(c) - 65 for rotor in STR_ROTORS for c in rotor])
-cdef array.array INV_ROTORS = array.array('i', [0] * 26 * len(STR_ROTORS))
-for i, r in enumerate(STR_ROTORS):
-    for x, y in enumerate(r):
-        INV_ROTORS[26 * i + ord(y) - 65] = x
-
-cdef array.array ROTOR_NOTCHES = array.array('i', [(ord(c) - 65 + 0) % 26 for c in "QEVJZ"])
+cdef array.array ROTOR_NOTCHES = array.array('i', [ord(c) - 65 for c in "QEVJZ"])
 
 STR_REFLECTORS = [
     "YRUHQSLDPXNGOKMIEBFZCWVJAT",
     "FVPJIAOYEDRZXWGCTKUQSBNMHL",
     ]
+
+cdef array.array FREQ = array.array('i', [0] * 26)
+cdef array.array ROTORS = array.array('i', [ord(c) - 65 for rotor in STR_ROTORS for c in rotor])
+cdef array.array INV_ROTORS = array.array('i', [0] * 26 * len(STR_ROTORS))
+for i, r in enumerate(STR_ROTORS):
+    for x, y in enumerate(r):
+        INV_ROTORS[26 * i + ord(y) - 65] = x
 cdef array.array REFLECTORS = array.array('i', [ord(c) - 65 for reflector in STR_REFLECTORS for c in reflector])
 
 cdef class Enigma:
-    def __init__(self, reflector, rotors, position, ring, plugboard):
+    def __init__(self, reflector, rotors, position, rings, plugboard):
         cdef int i
 
         self.num_rotors = len(rotors)
@@ -44,7 +42,7 @@ cdef class Enigma:
         self.plugboard = array.array('i', mapping)
 
         self.offsets = array.array('i', position)
-        self.rings = array.array('i', ring)
+        self.rings = array.array('i', rings)
 
     def score(self, str word):
         cdef int i, j, length
@@ -129,7 +127,7 @@ cdef class Enigma:
 
             c = self.plugboard.data.as_ints[c]
 
-            output[j] = c
+            output.data.as_ints[j] = c
 
         return ''.join(chr(x + 65) for x in output)
 
