@@ -39,36 +39,10 @@ class Enigma:
 
     def score(self, word):
         freq = [0] * 26
-        offsets = list(self.offsets)  # Work with a local copy.
-        output = []
-        for letter in word:
-            # Rotate the offsets.
-            for i in range(self.num_rotors):
-                if offsets[i] == self.notches[i]:
-                    if i < self.num_rotors - 1:
-                        offsets[i] = (offsets[i] + 1) % 26
-                    if i > 0:
-                        offsets[i-1] = (offsets[i-1] + 1) % 26
-            offsets[self.num_rotors-1] = (offsets[self.num_rotors-1] + 1) % 26
+        for letter in self(word):
+            freq[ord(letter) - 65] += 1
 
-            c = ord(letter) - 65
-
-            c = self.plugboard[c]
-
-            for rotor, offset, ring in zip(reversed(self.rotors), reversed(offsets), reversed(self.rings)):
-                shift = offset - ring
-                c = (ROTORS[rotor][(c + shift) % 26] - shift) % 26
-
-            c = REFLECTORS[self.reflector][c]
-
-            for rotor, offset, ring in zip(self.rotors, offsets, self.rings):
-                shift = offset - ring
-                c = (INV_ROTORS[rotor][(c + shift) % 26] - shift) % 26
-
-            c = self.plugboard[c]
-
-            output.append(c)
-            freq[c] += 1
+        freq[c] += 1
 
         return sum(x*x for x in freq)
 
